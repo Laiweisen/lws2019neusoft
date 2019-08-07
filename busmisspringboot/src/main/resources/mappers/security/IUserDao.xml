@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jyu.lws.busmis.security.dao.IUserDao">
+  
+  <cache/>
+  
+  <insert id="create" flushCache="true">
+  insert into userinfo values(#{id},#{password},#{name},#{role},#{age},#{joinDate},"未激活")
+  </insert>
+  
+  <update id="update" flushCache="true">
+  update userinfo set UserPassword=#{password},UserName=#{name},UserRole=#{role},Userage=#{age},JoinDate=#{joinDate}
+  where USERID=#{id}
+  </update>
+  
+  <delete id="delete" flushCache="true">
+  delete from userinfo where USERID=#{id}
+  </delete>
+  
+  <resultMap id="UserResultMap" type="User">
+      <id property="id" column="UserID"/>
+      <result property="password" column="USERPASSWORD"/>
+      <result property="name" column="UserNAME"/>
+      <result property="role" column="UserROLE"/>
+      <result property="age" column="UserAge"/>
+      <result property="joinDate" column="JoinDate"/>
+   </resultMap>
+  <select id="selectListByAll" resultMap="UserResultMap">
+		select * from userinfo
+  </select>
+  <select id="selectById" resultMap="UserResultMap">
+		select * from userinfo where UserId=#{id}
+  </select>
+  <select id="selectListByAllWithPage" resultMap="UserResultMap">
+           select * from userinfo
+           limit #{start},#{rows}   
+  </select>
+  <!-- 一次增加一个角色 -->
+  <insert id="addRole" flushCache="true">
+  insert into userrole values(#{id},#{roleNo})
+  </insert>
+  
+  <!-- 一次增加多个角色 -->
+  <insert id="addRoles" flushCache="true">
+   insert into userrole values
+   <foreach item="roleNo" collection="roleNoList" separator=",">
+      (#{id},#{roleNo})
+   </foreach>
+  </insert>
+  
+  <!-- 删除指定用户的所有角色 -->
+  <delete id="deleteRoles" flushCache="true">
+   delete from userrole where USERID=#{id}
+  </delete>
+  
+  <!-- 取的指定角色的用户列表 public List<UserModel> selectListByAllWithRoles() -->
+  <!-- 取的指定用户的角色列表 getRoleListByUser(String userid)-->
+  <!-- 取得用户和角色关联的个数 public int selectCountByUserAndRoles(@Param("id") String id, @Param("roleNo") int roleNo)-->
+  <!-- 取得指定用户的模块列表 -->
+	<select id="getModuleListByUser" resultMap="com.jyu.lws.busmis.security.dao.IModuleDao.ModuleResultMapWithFunctionsByNestedResultMap" >
+	 select a.*,b.* from systemmodule a inner join SYSTEMFUNCTION b on a.MNO=b.MNO
+	 where a.MNO in (select MNO from RoleModule where RNO in (select RNO from UserRoles where USERID=#{userid}))
+	</select>
+	
+	<!-- 根据参数条件取用户 -->
+	<select id="selectListByCondition" resultMap="UserResultMap">
+	  select *
+	  from userinfo
+	  <where>
+	  <if test="roleNo!=0">
+	    and  USERID in (select USERID from userrole where RNO=#{roleNo})
+	  </if>
+	  <if test="key!=null and key!=''">
+	    and username like #{key}
+	  </if>
+	  <if test="min!=0">
+	     and AGE &gt;=#{min}
+	  </if> 
+	  <if test="max!=0">
+	  and AGE &lt;=#{max}
+	  </if>
+	  <if test="start!=null">
+	  and JOINDATE &gt;=#{start}
+	  </if> 
+	  <if test="end!=null">
+	   and JOINDATE &lt;=#{end}
+	  </if>     
+	 </where>        
+    </select>
+</mapper>
